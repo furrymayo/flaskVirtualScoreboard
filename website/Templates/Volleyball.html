@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}UDP OES Data Reader{% endblock %}
+
+{% block content %}
+<style>
+    h1 {
+        text-align: center;
+        color: #77aacd;
+    }
+    body {
+        background-color: #1d2f4a; /* This sets the background color for the entire page */
+    }
+    #volleyballData {
+        border: 4px solid #77aacd;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+        grid-template-rows 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+        background-color: #343a40;
+    }
+    #gameClock::before {
+        content: "GAME CLOCK";
+        display: block;
+        font-weight: bold;
+        color: black;
+    }
+    #gameClock {
+        border: 2px solid black;
+        text-align: center;
+        grid-row: 4;
+        grid-column: 4;
+        color: yellow;
+    }
+
+    #currentSet::before {
+        content: "PERIOD";
+        display: block;
+        font-weight: bold;
+        color: black;
+    }
+    #currentSet {
+        border: 2px solid black;
+        text-align: center;
+        grid-row: 3;
+        grid-column: 4;
+        color: yellow;
+    }
+</style>
+
+<h1>Volleyball Virtual Scoreboard</h1>
+<div id="volleyballData">
+    <div id="gameClock"></div>
+    <div id="currentSet"></div>
+    <div id="homeMatchScore"></div>
+    <div id="guestMatchScore"></div>
+    <div id="homeSetScore"></div>
+    <div id="guestSetScore"></div>
+    <div id="homeSet1Result"></div>
+    <div id="guestSet1Result"></div>
+    <div id="homeSet2Result"></div>
+    <div id="guestSet2Result"></div>
+    <div id="homeSet3Result"></div>
+    <div id="guestSet3Result"></div>
+    <div id="homeSet4Result"></div>
+    <div id="guestSet4Result"></div>
+    <div id="homeSet5Result"></div>
+    <div id="guestSet5Result"></div>
+    <!-- other divs -->
+</div>
+
+<script>
+    function fetchVolleyballData() {
+        fetch(`/get_udp_data/Volleyball`)
+            .then(response => response.json())
+            .then(data => {
+                // Update the gameClock
+                const gameClockDiv = document.getElementById('gameClock');
+                const minuteTens = data['Game Time Minute Tens'] || '9';
+                const minuteOnes = data['Game Time Minute Ones'] || '9';
+                const secondTens = data['Game Time Second Tens'] || '9';
+                const secondOnes = data['Game Time Second Ones'] || '9';
+
+                const gameClockData = (minuteTens && minuteOnes && secondTens && secondOnes)
+                    ? `${minuteTens}${minuteOnes}:${secondTens}${secondOnes}`
+                    : '99:99';
+
+                gameClockDiv.innerText = gameClockData;
+
+                // Update currentSet
+                const currentSetDiv = document.getElementById('currentSet');
+                const currentSet = data['Period'] || '9';
+
+                const currentSetData = (currentSet)
+                    ? `${currentSet}`
+                    : '9';
+
+                currentSetDiv.innerText = currentSetData;
+
+                // Create an array of keys to loop through
+                const keys = [
+                    // ... (your keys)
+                ];
+
+                let htmlContent = '';
+
+                keys.forEach(key => {
+                    const value = data[key] || 'N/A';
+                    htmlContent += `<p>${key}: ${value}</p>`;
+                });
+
+                // Assuming you have a div to hold the other data
+                const otherDataDiv = document.getElementById('otherData');
+                otherDataDiv.innerHTML = htmlContent;
+            });
+    }
+
+    // Fetch data when the page loads
+    fetchVolleyballData();
+    setInterval(fetchVolleyballData, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}UDP OES Data Reader{% endblock %}
+
+{% block content %}
+<style>
+    h1 {
+        text-align: center;
+        }
+    #volleyballData {
+        display: grid;
+        grid-template-columns: 4fr 4fr;
+    }
+    #gameClock {
+        grid-row: 2;
+        grid-column: 2;
+    }
+</style>
+
+<h1>Volleyball Virtual Scoreboard</h1>
+<div id="volleyballData">
+    <div id="gameClock"></div>
+    <div id="currentSet"></div>
+    <div id="homeMatchScore"></div>
+    <div id="guestMatchScore"></div>
+    <div id="homeSetScore"></div>
+    <div id="guestSetScore"></div>
+    <div id="homeSet1Result"></div>
+    <div id="guestSet1Result"></div>
+    <div id="homeSet2Result"></div>
+    <div id="guestSet2Result"></div>
+    <div id="homeSet3Result"></div>
+    <div id="guestSet3Result"></div>
+    <div id="homeSet4Result"></div>
+    <div id="guestSet4Result"></div>
+    <div id="homeSet5Result"></div>
+    <div id="guestSet5Result"></div>
+    <!-- Volleyball data will be displayed here -->
+</div>
+
+<script>
+    function fetchVolleyballData() {
+        fetch(`/get_udp_data/Volleyball`)
+            .then(response => response.json())
+            .then(data => {
+                // Parse and display the data
+                const volleyballDataDiv = document.getElementById('volleyballData');
+
+                // Update the game clock
+                const gameClockDiv = document.getElementById('gameClock');
+                const minuteTens = data['Game Time Minute Tens'] || '9';
+                const minuteOnes = data['Game Time Minute Ones'] || '9';
+                const secondTens = data['Game Time Second Tens'] || '9';
+                const secondOnes = data['Game Time Second Ones'] || '9';
+
+                const gameClockData = (minuteTens && minuteOnes && secondTens && secondOnes)
+                    ? `Game Clock: ${minuteTens}:${minuteOnes}:${secondTens}:${secondOnes}`
+                   : 'Game Clock: 99:99';
+
+                gameClockDiv.innerText = gameClockData;
+
+                // Create an array of keys to loop through
+                const keys = [
+                    'Game Time Minute Tens', 'Game Time Minute Ones',
+                    'Game Time Second Tens', 'Game Time Second Ones',
+                    'Period',
+                    'Home Score Tens', 'Home Score Ones',
+                    'Guest Score Tens', 'Guest Score Ones',
+                    'Home TOL', 'Guest TOL',
+                    'Home Games Won', 'Guest Games Won',
+                    'Home Game 1 Score Tens', 'Home Game 1 Score Ones',
+                    'Home Game 2 Score Tens', 'Home Game 2 Score Ones',
+                    'Home Game 3 Score Tens', 'Home Game 3 Score Ones',
+                    'Home Game 4 Score Tens', 'Home Game 4 Score Ones',
+                    'Home Game 5 Score Tens', 'Home Game 5 Score Ones',
+                    'Guest Game 1 Score Tens', 'Guest Game 1 Score Ones',
+                    'Guest Game 2 Score Tens', 'Guest Game 2 Score Ones',
+                    'Guest Game 3 Score Tens', 'Guest Game 3 Score Ones',
+                    'Guest Game 4 Score Tens', 'Guest Game 4 Score Ones',
+                    'Guest Game 5 Score Tens', 'Guest Game 5 Score Ones'
+                ];
+
+                let htmlContent = '';
+
+                keys.forEach(key => {
+                    const value = data[key] || 'N/A';
+                    htmlContent += `<p>${key}: ${value}</p>`;
+                });
+
+                volleyballDataDiv.innerHTML = htmlContent;
+            });
+    }
+
+    // Fetch data when the page loads
+    fetchVolleyballData();
+    setInterval(fetchVolleyballData, 1000);
+
+
+</script>
+{% endblock %}
