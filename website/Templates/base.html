@@ -6,27 +6,12 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>{% block title %}UDP OES Data Viewer{% endblock %}</title>
-    <script>
-        function fetchData(sport) {
-            fetch(`/get_udp_data/${sport}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('udpData').innerText = JSON.stringify(data, null, 2);
-                });
-        }
 
-        function updateServerConfig() {
-            const ip = document.getElementById('ip').value;
-            const port = document.getElementById('port').value;
-            fetch(`/update_server_config`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ip, port})
-            });
+    <style>
+        #navbar {
+            flex-direction: column;
         }
-    </script>
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -34,14 +19,135 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbar">
-            <div class="mt-2">
-                <div>
-                    <label for="ip" style="font-weight: bold; color: white;">IP Address:</label>
-                    <input type="text" id="ip" name="ip">
-                    <label for="port" style="font-weight: bold; color: white;">Port:</label>
-                    <input type="text" id="port" name="port">
-                    <button onclick="updateServerConfig()">Update Server Config</button>
-                </div>
+            <div>
+                <form id="server-config-form">
+                    <label for="protocol">Select Data Source:</label>
+                    <select id="protocol" name="protocol">
+                        <option value="UDP">UDP</option>
+                        <option value="TCP">TCP</option>
+                        <option value="Serial">Local Serial</option>
+                    </select>
+                    <button type="submit">Update Config</button>
+
+                    <div id="udp-config">
+                        <label for="udp-ip">UDP IP:</label>
+                        <input type="text" id="udp-ip" name="udp-ip">
+                        <label for="udp-port">UDP Port:</label>
+                        <input type="text" id="udp-port" name="udp-port">
+                    </div>
+
+                    <div id="tcp-config" style="display:none;">
+                        <label for="tcp-ip">TCP IP:</label>
+                        <input type="text" id="tcp-ip" name="tcp-ip">
+                        <label for="tcp-port">TCP Port:</label>
+                        <input type="text" id="tcp-port" name="tcp-port">
+                    </div>
+
+                    <div id="serial-config" style="display:none;">
+                        <label for="serial-port">Serial Port:</label>
+                        <input type="text" id="serial-port" name="serial-port">
+                    </div>
+                </form>
+
+                <script>
+                    // Add JavaScript to handle form submission and toggle visibility
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const protocolSelect = document.getElementById("protocol");
+                        protocolSelect.addEventListener("change", function () {
+                            document.getElementById("udp-config").style.display = "none";
+                            document.getElementById("tcp-config").style.display = "none";
+                            document.getElementById("serial-config").style.display = "none";
+                            document.getElementById(protocolSelect.value.toLowerCase() + "-config").style.display = "block";
+                        });
+
+                        const form = document.getElementById("server-config-form");
+                        form.addEventListener("submit", function (event) {
+                            event.preventDefault();
+                            updateServerConfig(); // Call the function here
+                            // TODO: Submit the form data to your server using AJAX
+                        });
+                    });
+
+                    // Updated to handle new form fields
+                    function updateServerConfig() {
+                        const protocol = document.getElementById('protocol').value;
+                        const udpIp = document.getElementById('udp-ip').value;
+                        const udpPort = document.getElementById('udp-port').value;
+                        const tcpIp = document.getElementById('tcp-ip').value;
+                        const tcpPort = document.getElementById('tcp-port').value;
+                        const serialPort = document.getElementById('serial-port').value;
+
+                        const data = {
+                            protocol: protocol,
+                            ip: protocol === 'UDP' ? udpIp : tcpIp,
+                            port: protocol === 'UDP' ? udpPort : (protocol === 'TCP' ? tcpPort : serialPort)
+                        };
+
+                        fetch(`/update_server_config`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                alert('Server config updated: ' + data.status);
+                                document.dispatchEvent(new CustomEvent('dataFetched', { detail: data }));
+
+                            })
+                            .catch((error) => {
+                                console.error('Error:', error);
+                            });
+                    }
+
+                    function fetchData(sport) {
+                        const protocol = document.getElementById('protocol').value;
+                        let url = '/get_raw_data/${protocol}';
+
+                        fetch(url)
+                            .then(response => response.text())  // Assuming the raw data is plain text
+                            .then(data => {
+                                document.getElementById('rawData').innerText = data;
+                            })
+                            .catch((error) => {
+                                console.error('Error:', error);
+                            });
+
+                        // Determine the URL based on the selected protocol
+                        if (protocol === 'UDP') {
+                            url = `/get_udp_data/${sport}`;
+                        } else if (protocol === 'TCP') {
+                            url = `/get_tcp_data/${sport}`;  // Replace with your actual TCP endpoint
+                        } else if (protocol === 'Serial') {
+                            url = `/get_serial_data/${sport}`;  // Replace with your actual Serial endpoint
+                        }
+
+                        fetch(url)
+                        function fetchRawData() {
+                            const protocol = document.getElementById('protocol').value;
+                            let url = `/get_raw_data/${protocol}`;  // Replace with your actual endpoint for raw data
+
+                            fetch(url)
+                                .then(response => response.text())  // Assuming the raw data is plain text
+                                .then(data => {
+                                    document.getElementById('rawData').innerText = data;
+                                })
+                                .catch((error) => {
+                                    console.error('Error:', error);
+                                });
+                        }
+
+                    }
+                </script>
+            </div>
+
+            <div class="ml-4">
+                <h5>Raw Data:</h5>
+                <pre id="rawData" style="max-height: 200px; overflow-y: auto;"></pre>
+            </div>
+
+            <div class="links">
                 <div class="navbar-nav">
                     <a class="nav-item nav-link" id="Basketball" href="/Basketball">Basketball</a>
                     <a class="nav-item nav-link" id="Hockey" href="/Hockey">Hockey</a>
@@ -60,7 +166,9 @@
     <div class="container">
         {% block content %}{% endblock %}
     </div>
-    <pre id="udpData"></pre>
+    <pre id="finalData"></pre>
+    <pre id="rawData"></pre>
+
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>

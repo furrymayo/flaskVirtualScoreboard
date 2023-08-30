@@ -2,6 +2,8 @@ from website import create_app
 from flask import Flask, request, jsonify
 import threading
 import socket
+import serial
+
 
 app = create_app()
 
@@ -21,10 +23,14 @@ udp_data = {
 
 # Add a flag to signal the thread to stop
 stop_udp_thread = False
+stop_tcp_thread = False
+stop_serial_thread = False
 
 udp_thread = None
+tcp_thread = None
+serial_thread = None
 
-
+# UDP Server Config
 def udp_server(ip, port):
     global stop_udp_thread
     stop_udp_thread = True  # Signal the previous thread to stop
@@ -56,6 +62,74 @@ def udp_server(ip, port):
             udp_data['Softball'] = parse_softball_data(data)
         elif sport_code == 'bsb':  # Baseball (unknown)
             udp_data['Baseball'] = parse_baseball_data(data)
+        # ... (other sports)
+
+# TCP Server Config
+def tcp_server(ip, port):
+    global stop_tcp_thread
+    stop_tcp_thread = True  # Signal the previous thread to stop
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((ip, int(port)))
+
+    stop_tcp_thread = False  # Reset the flag
+
+    while not stop_tcp_thread:
+        data, addr = sock.recvfrom(1024)
+        # Your existing code to handle TCP data
+        sport_code = chr(data[0])
+        if sport_code == 't':  # Basketball
+            tcp_data['Basketball'] = parse_basketball_data(data)
+        elif sport_code == 'h':  # Hockey
+            tcp_data['Hockey'] = parse_hockey_data(data)
+        elif sport_code == 'l':  # Lacrosse
+            tcp_data['Lacrosse'] = parse_lacrosse_data(data)
+        elif sport_code == 'f':  # Football
+            tcp_data['Football'] = parse_football_data(data)
+        elif sport_code == 'v':  # Volleyball
+            tcp_data['Volleyball'] = parse_volleyball_data(data)
+        elif sport_code == 'w':  # Wrestling
+            tcp_data['Wrestling'] = parse_wrestling_data(data)
+        elif sport_code == 's':  # Soccer
+            tcp_data['Soccer'] = parse_soccer_data(data)
+        elif sport_code == 'sft':  # Softball (unknown)
+            tcp_data['Softball'] = parse_softball_data(data)
+        elif sport_code == 'bsb':  # Baseball (unknown)
+            tcp_data['Baseball'] = parse_baseball_data(data)
+        # ... (other sports)
+
+# Serial Server Config
+def serial_port_reader(port):
+    global stop_serial_thread
+    stop_serial_thread = True  # Signal the previous thread to stop
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((int(port)))
+
+    stop_serial_thread = False  # Reset the flag
+
+    while not stop_tcp_thread:
+        data, addr = sock.recvfrom(1024)
+        # Your existing code to handle TCP data
+        sport_code = chr(data[0])
+        if sport_code == 't':  # Basketball
+            serial_data['Basketball'] = parse_basketball_data(data)
+        elif sport_code == 'h':  # Hockey
+            serial_data['Hockey'] = parse_hockey_data(data)
+        elif sport_code == 'l':  # Lacrosse
+            serial_data['Lacrosse'] = parse_lacrosse_data(data)
+        elif sport_code == 'f':  # Football
+            serial_data['Football'] = parse_football_data(data)
+        elif sport_code == 'v':  # Volleyball
+            serial_data['Volleyball'] = parse_volleyball_data(data)
+        elif sport_code == 'w':  # Wrestling
+            serial_data['Wrestling'] = parse_wrestling_data(data)
+        elif sport_code == 's':  # Soccer
+            serial_data['Soccer'] = parse_soccer_data(data)
+        elif sport_code == 'sft':  # Softball (unknown)
+            serial_data['Softball'] = parse_softball_data(data)
+        elif sport_code == 'bsb':  # Baseball (unknown)
+            serial_data['Baseball'] = parse_baseball_data(data)
         # ... (other sports)
 
 # Parsing functions for each sport
@@ -118,24 +192,58 @@ def parse_baseball_data(data):
 # Modify your update_server_config function
 @app.route('/update_server_config', methods=['POST'])
 def update_server_config():
-    global udp_thread, stop_udp_thread
+    global udp_thread, stop_udp_thread, tcp_thread, stop_tcp_thread, serial_thread, stop_serial_thread
 
+    # Stop Existing Threads
     if udp_thread is not None:
         stop_udp_thread = True  # Signal the existing thread to stop
         udp_thread.join()  # Wait for it to stop
+    if tcp_thread is not None:
+        stop_tcp_thread = True
+        tcp_thread.join()
+    if serial_thread is not None:
+        stop_serial_thread = True
+        serial_thread.join()
 
     config = request.json
+    protocol = config.get('protocol', 'UDP')
     ip = config.get('ip', '0.0.0.0')
     port = config.get('port', 5005)
 
-    udp_thread = threading.Thread(target=udp_server, args=(ip, port))
-    udp_thread.start()
+    if protocol == 'UDP':
+        udp_thread = threading.Thread(target=udp_server, args=(ip, port))
+        udp_thread.start()
+    elif protocol == 'TCP':
+        tcp_thread = threading.Thread(target=tcp_server, args=(ip, port))
+        tcp_thread.start()
+    elif protocol == 'Serial':
+        serial_thread = threading.Thread(target=serial_port_reader, args=(port,))
+        serial_thread.start()
 
     return jsonify({'status': 'Server config updated'})
+
+@app.route('/get_raw_data/<protocol>', methods=['GET'])
+def get_raw_data(protocol):
+    if protocol == 'UDP':
+        return jsonify(udp_data.get(sport, {})) # Fetch and return raw UDP data
+    elif protocol == 'TCP':
+        return jsonify(tcp_data.get(sport, {})) # Fetch and return raw TCP data
+    elif protocol == 'Serial':
+        return jsonify(serial_data.get(sport, {}))  # Fetch and return raw Serial data
+    return "Raw data here", 200
+
 
 @app.route('/get_udp_data/<sport>')
 def get_udp_data(sport):
     return jsonify(udp_data.get(sport, {}))
+
+@app.route('/get_tcp_data/<sport>')
+def get_tcp_data(sport):
+    return jsonify(tcp_data.get(sport, {}))
+
+@app.route('/get_serial_data/<sport>')
+def get_serial_data(sport):
+    return jsonify(serial_data.get(sport, {}))
 
 if __name__ == '__main__':
     app.run(debug=True)
