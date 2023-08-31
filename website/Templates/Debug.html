@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}COM Port Data Reader{% endblock %}
+
+{% block content %}
+<style>
+    h1 {
+        text-align: center;
+        color: #77aacd;
+    }
+
+    body {
+        background-color: #1d2f4a; /* This sets the background color for the entire page */
+    }
+
+    #debugWindow {
+        border: 4px solid #77aacd;
+        background-color: #343a40;
+        color: yellow;
+        padding: 20px;
+        height: 80vh;
+        overflow-y: auto;
+    }
+</style>
+
+<h1>COM Port Debugging Window</h1>
+
+<div id="sportCode">
+    <label for="sport-select">Select Sport:</label>
+    <select id="sport-select">
+        <option value="Basketball">Basketball</option>
+        <option value="Hockey">Hockey</option>
+        <option value="Lacrosse">Lacrosse</option>
+        <option value="Football">Football</option>
+        <option value="Volleyball">Volleyball</option>
+        <option value="Wrestling">Wrestling</option>
+        <option value="Soccer">Soccer</option>
+        <option value="Softball">Softball</option>
+        <option value="Baseball">Baseball</option>
+        <!-- Add more sports here -->
+    </select>
+</div>
+
+<div id="debugWindow">
+    <!-- Real-time data from selected COM port will be displayed here -->
+</div>
+
+<script>
+    // Function to update the debug window
+    function updateDebugWindow(data) {
+        const debugWindowDiv = document.getElementById('debugWindow');
+        if (data.error) {
+            debugWindowDiv.innerHTML += `<p style="color: red;">${data.error}</p>`;
+        } else {
+            debugWindowDiv.innerHTML += `<p>${JSON.stringify(data)}</p>`;
+        }
+    }
+
+    // Function to fetch COM port data
+    function fetchCOMPortData() {
+        const selectedSport = document.getElementById('sport-select').value;
+        const selectedCOMPort = document.getElementById('serial-port').value;
+
+        if (selectedCOMPort === 'none') {
+            updateDebugWindow({ error: 'No COM Port selected.' });
+            return;
+        }
+
+        fetch(`/get_raw_data/${selectedSport}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    updateDebugWindow({ error: data.error });
+                } else {
+                    updateDebugWindow(data);
+                }                
+            })
+            .catch(error => console.error('Error fetching COM port data:', error));
+    }
+
+    // Fetch data when the page loads and set an interval to keep fetching
+    fetchCOMPortData();
+    setInterval(fetchCOMPortData, 1000);
+
+    // Update data when the user changes the sport or COM port
+    document.getElementById('sport-select').addEventListener('change', fetchCOMPortData);
+    document.getElementById('serial-port').addEventListener('change', fetchCOMPortData);
+
+    // Update the UI when data is fetched
+    document.addEventListener('dataFetched', function (event) {
+        console.log("Data Fetched: ", event.detail); // Debugging Line
+        updateDebugWindow(event.detail);
+    });
+</script>
+{% endblock %}

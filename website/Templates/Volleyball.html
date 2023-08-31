@@ -111,6 +111,7 @@
 
     // Update the UI when data is fetched
     document.addEventListener('dataFetched', function (event) {
+        console.log("Data Fetched: ", event.detail); // Debugging Line
         updateVolleyballUI(event.detail);
     });
 

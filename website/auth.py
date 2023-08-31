@@ -42,3 +42,7 @@ def Softball():
 @auth.route('/Baseball')
 def Baseball():
     return render_template("baseball.html")
+
+@auth.route('/Debug')
+def Debug():
+    return render_template("debug.html")
